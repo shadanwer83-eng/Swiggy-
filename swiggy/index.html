@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swiggy - Food Delivery, Live Rider Tracking & Invoices</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Top Role Switcher Bar (Switch between Customer, Restaurant & Rider Views) -->
+  <aside class="role-banner" aria-label="Demo Role & Simulation Controls">
+    <div class="role-banner-left">
+      <span>Role Mode:</span>
+      <div class="role-pill-group">
+        <button class="role-btn active" data-role="customer">🍔 Customer App</button>
+        <button class="role-btn" data-role="restaurant">🍳 Kitchen (KDS)</button>
+        <button class="role-btn" data-role="rider">🛵 Rider App</button>
+      </div>
+    </div>
+    <div class="role-banner-right">
+      <button class="sim-speed-btn" id="sim-speed-btn" title="Adjust GPS simulation speed">⚡ Speed: 1x</button>
+      <button class="sound-toggle-btn" id="sound-toggle-btn" title="Toggle audio chimes & alerts">🔊 Sound: ON</button>
+    </div>
+  </aside>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <a href="javascript:void(0)" class="brand-logo" onclick="switchCustomerTab('explore')">
+          <div class="brand-icon">S</div>
+          <span>swiggy</span>
+        </a>
+
+        <div class="location-selector" title="Click to change location">
+          <span style="font-size: 16px;">📍</span>
+          <div>
+            <div class="location-label">HSR Layout, Sector 4</div>
+            <div class="location-subtext">Bengaluru, Karnataka</div>
+          </div>
+          <span style="font-size: 12px; color: #fc8019;">▼</span>
+        </div>
+      </div>
+
+      <nav aria-label="Main Navigation">
+        <ul class="nav-links">
+          <li>
+            <a href="javascript:void(0)" class="nav-item active" data-tab="explore">
+              <span>🍽️ Restaurants</span>
+            </a>
+          </li>
+          <li>
+            <a href="javascript:void(0)" class="nav-item" data-tab="tracking">
+              <span>🛵 Live Tracking</span>
+              <span class="badge" id="header-tracking-badge" style="display: none;">1 Live</span>
+            </a>
+          </li>
+          <li>
+            <a href="javascript:void(0)" class="nav-item" data-tab="orders">
+              <span>📄 Orders & Invoices</span>
+            </a>
+          </li>
+          <li>
+            <a href="javascript:void(0)" class="nav-item" id="notif-bell-btn">
+              <span>🔔 Notifications</span>
+              <span class="badge badge-green" id="notif-badge" style="display: none;">0</span>
+            </a>
+          </li>
+          <li>
+            <a href="javascript:void(0)" class="nav-item" onclick="openCheckoutModal()">
+              <span>🛒 Cart</span>
+              <span class="badge" id="header-cart-badge" style="display: none;">0</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Application Body -->
+  <main class="main-content">
+
+    <!-- ======================================================================
+         CUSTOMER VIEW
+         ====================================================================== -->
+    <div id="role-customer-container">
+
+      <!-- Tab 1: Restaurant Explore / Home -->
+      <section class="customer-tab-view active-view" data-tab="explore" id="explore-tab-view">
+        
+        <!-- Promo Banners Carousel -->
+        <div class="hero-banner-carousel">
+          <div class="promo-card" onclick="openRestaurant('rest_1')">
+            <div>
+              <div class="promo-title">Gourmet Biryani Fest</div>
+              <div class="promo-sub">Flat 50% OFF up to ₹100 on Royal Biryanis</div>
+            </div>
+            <span class="promo-code-pill">USE CODE: SWIGGY50</span>
+          </div>
+
+          <div class="promo-card variant-2" onclick="openRestaurant('rest_2')">
+            <div>
+              <div class="promo-title">Craving Burgers & Shakes?</div>
+              <div class="promo-sub">Flat ₹120 OFF on Truffles American Diner</div>
+            </div>
+            <span class="promo-code-pill">USE CODE: WELCOME120</span>
+          </div>
+
+          <div class="promo-card variant-3" onclick="openRestaurant('rest_3')">
+            <div>
+              <div class="promo-title">Ice Cream & Desserts</div>
+              <div class="promo-sub">Free Doorstep Express Delivery on Corner House</div>
+            </div>
+            <span class="promo-code-pill">USE CODE: FREEDEL</span>
+          </div>
+        </div>
+
+        <!-- Food Categories Section -->
+        <div class="section-header">
+          <h2 class="section-title">What's on your mind?</h2>
+        </div>
+        <div class="category-row">
+          <div class="category-item" onclick="currentCategory='biryani'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🍲</div>
+            <span class="category-name">Biryani</span>
+          </div>
+          <div class="category-item" onclick="currentCategory='burgers'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🍔</div>
+            <span class="category-name">Burgers</span>
+          </div>
+          <div class="category-item" onclick="currentCategory='pizza'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🍕</div>
+            <span class="category-name">Pizzas</span>
+          </div>
+          <div class="category-item" onclick="currentCategory='rolls'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🌯</div>
+            <span class="category-name">Rolls</span>
+          </div>
+          <div class="category-item" onclick="currentCategory='desserts'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🍨</div>
+            <span class="category-name">Ice Creams</span>
+          </div>
+          <div class="category-item" onclick="currentCategory='north-indian'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🥘</div>
+            <span class="category-name">North Indian</span>
+          </div>
+          <div class="category-item" onclick="currentCategory='chinese'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🍜</div>
+            <span class="category-name">Chinese</span>
+          </div>
+          <div class="category-item" onclick="currentCategory='beverages'; renderRestaurantList(window.swiggyStore.state);">
+            <div class="category-icon-wrapper">🥤</div>
+            <span class="category-name">Beverages</span>
+          </div>
+        </div>
+
+        <!-- Search & Filter Chips -->
+        <div class="filter-bar">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="global-search-input" class="search-input" placeholder="Search for restaurant, food or dish (e.g. Biryani, Truffles...)">
+          </div>
+          <button class="filter-chip active" id="filter-all" data-filter="all">All</button>
+          <button class="filter-chip" data-filter="veg">🌱 Pure Veg</button>
+          <button class="filter-chip" data-filter="fast">⚡ Fast Delivery (< 30 mins)</button>
+          <button class="filter-chip" data-filter="rating">★ Ratings 4.5+</button>
+        </div>
+
+        <!-- Restaurant Grid -->
+        <div class="section-header">
+          <h2 class="section-title">Top restaurant chains in Bengaluru</h2>
+        </div>
+        <div class="restaurant-grid" id="restaurant-grid">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Tab 2: Restaurant Menu Detail -->
+      <section class="customer-tab-view" data-tab="restaurant-detail" id="restaurant-detail-tab-view">
+        <div id="restaurant-detail-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Tab 3: Live Order Tracking & Interactive Map -->
+      <section class="customer-tab-view" data-tab="tracking" id="tracking-tab-view">
+        <div class="tracking-container" id="tracking-content">
+          <!-- Left: Leaflet Live Map Card -->
+          <div class="map-card">
+            <div class="map-header">
+              <div>
+                <div class="eta-display">
+                  <span class="eta-big" id="tracking-eta-mins">24 mins</span>
+                  <span class="eta-label">ON TIME</span>
+                </div>
+                <div style="font-size: 13px; color: #64748b;" id="tracking-eta-sub">Estimated Delivery to HSR Layout</div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="secondary-btn" onclick="openInvoiceModal()" style="font-size: 12px; padding: 6px 12px;">
+                  📄 Tax Invoice
+                </button>
+              </div>
+            </div>
+
+            <!-- Leaflet Interactive Map -->
+            <div id="tracking-map"></div>
+          </div>
+
+          <!-- Right: Status Stepper & Rider Profile -->
+          <div class="tracking-sidebar">
+            
+            <!-- Delivery OTP Card -->
+            <div class="otp-card">
+              <div>
+                <div class="otp-title">Share Delivery OTP with Rider</div>
+                <div style="font-size: 11px; color: #b45309;">Only share when you receive your order</div>
+              </div>
+              <div class="otp-code" id="tracking-otp-code">4829</div>
+            </div>
+
+            <!-- Rider Profile Card -->
+            <div class="rider-card">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" alt="Rider" class="rider-avatar">
+              <div class="rider-info">
+                <div class="rider-name" id="tracking-rider-name">Rahul Sharma</div>
+                <div class="rider-badge" id="tracking-rider-rating">★ 4.9 (1,420 deliveries)</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;" id="tracking-rider-vehicle">Hero Splendor (KA 01 EK 8832)</div>
+              </div>
+              <div class="rider-actions">
+                <button class="icon-btn" onclick="alert('Calling Delivery Partner Rahul Sharma at +91 98765 43210...')" title="Call Rider">📞</button>
+                <button class="icon-btn" onclick="alert('Opening in-app delivery chat with Rahul...')" title="Chat with Rider">💬</button>
+              </div>
+            </div>
+
+            <!-- Status Stepper -->
+            <div class="tracking-status-card">
+              <div style="font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 12px;">Delivery Progress</div>
+              <div class="order-progress-stepper" id="tracking-stepper">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 4: Order History & Invoices -->
+      <section class="customer-tab-view" data-tab="orders" id="orders-tab-view">
+        <div class="section-header" style="margin-top: 0;">
+          <h2 class="section-title">Past Food Orders & Invoices</h2>
+        </div>
+        <div class="orders-list" id="orders-history-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ======================================================================
+         RESTAURANT KITCHEN DISPLAY (KDS) VIEW
+         ====================================================================== -->
+    <div id="role-restaurant-container" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+          <h2>👨‍🍳 Meghana Foods - Kitchen Order Display (KDS)</h2>
+          <p style="color: #64748b; font-size: 14px;">Live order acceptance, preparation and food packaging station.</p>
+        </div>
+        <span class="badge badge-green" style="font-size: 13px; padding: 6px 14px;">Kitchen Status: ACTIVE</span>
+      </div>
+
+      <div class="restaurant-dash-grid" id="restaurant-orders-grid">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         DELIVERY RIDER PARTNER VIEW
+         ====================================================================== -->
+    <div id="role-rider-container" style="display: none;">
+      <div class="rider-app-wrapper">
+        <div class="rider-top-status">
+          <div class="rider-status-header">
+            <div>
+              <h3>Rahul Sharma</h3>
+              <div style="font-size: 12px; color: #94a3b8;">Hero Splendor (KA 01 EK 8832)</div>
+            </div>
+            <div class="duty-toggle">
+              <span class="online-dot"></span>
+              <span>ONLINE</span>
+            </div>
+          </div>
+
+          <div class="rider-metrics-grid">
+            <div class="rider-metric-box">
+              <div class="rider-metric-val">₹850</div>
+              <div class="rider-metric-lbl">Today's Earnings</div>
+            </div>
+            <div class="rider-metric-box">
+              <div class="rider-metric-val">8</div>
+              <div class="rider-metric-lbl">Deliveries Done</div>
+            </div>
+            <div class="rider-metric-box">
+              <div class="rider-metric-val">4.9 ★</div>
+              <div class="rider-metric-lbl">Customer Rating</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rider-active-delivery" id="rider-active-delivery-card">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================
+       FLOATING CART BAR
+       ======================================================================== -->
+  <aside class="floating-cart-bar" id="floating-cart-bar" aria-label="Cart Overview">
+    <div>
+      <span id="cart-bar-count">2 ITEMS</span>
+      <span style="margin: 0 8px;">|</span>
+      <span id="cart-bar-total">₹970</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>VIEW CART & CHECKOUT</span>
+      <span>➔</span>
+    </div>
+  </aside>
+
+  <!-- ========================================================================
+       CHECKOUT & BILLING MODAL
+       ======================================================================== -->
+  <div class="modal-overlay" id="checkout-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Checkout & Payment</h3>
+        <button class="modal-close-btn" onclick="closeCheckoutModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Delivery Address -->
+        <div class="checkout-section">
+          <div class="checkout-section-title">Delivery Address</div>
+          <div class="address-box">
+            <div style="font-weight: 700; font-size: 14px;">🏠 Home (HSR Layout)</div>
+            <div style="font-size: 13px; color: #475569; margin-top: 2px;">
+              Flat 402, Green Glen Heights, 14th Main Rd, Sector 4, Bengaluru - 560102
+            </div>
+            <input type="text" placeholder="Add delivery note (e.g. Leave with security, ring bell)" id="delivery-notes-input">
+          </div>
+        </div>
+
+        <!-- Cart Items Summary -->
+        <div class="checkout-section">
+          <div class="checkout-section-title">Order Items</div>
+          <div id="checkout-items-list" style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Coupon Apply -->
+        <div class="checkout-section">
+          <div class="checkout-section-title">Offers & Coupons</div>
+          <div id="applied-coupon-container"></div>
+          <div class="coupon-box">
+            <input type="text" class="coupon-input" id="coupon-input-box" placeholder="ENTER CODE (e.g. SWIGGY50)">
+            <button class="apply-coupon-btn" onclick="applyCouponInput()">APPLY</button>
+          </div>
+        </div>
+
+        <!-- Rider Tip -->
+        <div class="checkout-section">
+          <div class="checkout-section-title">Tip your delivery partner</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="secondary-btn tip-btn" data-tip="10">₹10</button>
+            <button class="secondary-btn tip-btn active" data-tip="20">₹20</button>
+            <button class="secondary-btn tip-btn" data-tip="30">₹30</button>
+            <button class="secondary-btn tip-btn" data-tip="50">₹50</button>
+          </div>
+        </div>
+
+        <!-- Bill Details -->
+        <div class="checkout-section">
+          <div class="checkout-section-title">Bill Details</div>
+          <div class="bill-row">
+            <span>Item Total</span>
+            <span id="bill-item-total">₹0.00</span>
+          </div>
+          <div class="bill-row">
+            <span>Restaurant Packaging Charges</span>
+            <span id="bill-packaging">₹35.00</span>
+          </div>
+          <div class="bill-row">
+            <span>Delivery Partner Fee</span>
+            <span id="bill-delivery">₹40.00</span>
+          </div>
+          <div class="bill-row">
+            <span>Platform Convenience Fee</span>
+            <span id="bill-platform">₹6.00</span>
+          </div>
+          <div class="bill-row">
+            <span>Taxes & GST (5%)</span>
+            <span id="bill-gst">₹0.00</span>
+          </div>
+          <div class="bill-row">
+            <span>Rider Tip</span>
+            <span id="bill-tip">₹20.00</span>
+          </div>
+          <div class="bill-row discount-row" id="bill-discount-row" style="display: none;">
+            <span>Coupon Discount</span>
+            <span id="bill-discount">-₹0.00</span>
+          </div>
+          <div class="bill-row total-row">
+            <span>TO PAY</span>
+            <span id="bill-grand-total">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="checkout-section">
+          <div class="checkout-section-title">Select Payment Mode</div>
+          <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+            <input type="radio" name="paymentMethod" value="UPI (Google Pay)" checked>
+            <strong>UPI (Google Pay / PhonePe / Paytm)</strong>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+            <input type="radio" name="paymentMethod" value="Credit/Debit Card">
+            <span>Credit / Debit Card (Visa, MasterCard, RuPay)</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="radio" name="paymentMethod" value="Cash On Delivery">
+            <span>Cash on Delivery (COD)</span>
+          </label>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="primary-btn" onclick="confirmOrderPlacement()">
+          PLACE ORDER & PAY NOW 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TAX INVOICE MODAL
+       ======================================================================== -->
+  <div class="modal-overlay" id="invoice-modal">
+    <div class="modal-card" style="max-width: 820px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Official Tax Invoice</h3>
+        <button class="modal-close-btn" onclick="closeInvoiceModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="invoice-modal-body">
+        <!-- Rendered dynamically by invoice.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       NOTIFICATION DRAWER
+       ======================================================================== -->
+  <aside class="notif-drawer" id="notif-drawer" aria-label="Notifications Center">
+    <div class="notif-header">
+      <h3 style="font-size: 16px; font-weight: 800;">Delivery & Order Alerts</h3>
+      <button class="modal-close-btn" id="close-notif-drawer">&times;</button>
+    </div>
+    <div class="notif-list" id="notif-drawer-list">
+      <!-- Populated dynamically -->
+    </div>
+  </aside>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="js/audio.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/invoice.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
+
